@@ -82,49 +82,74 @@ def freq_table(df, variable):
 df = read_excel_file("ex/example_CI.xlsx", "Al Bundy", 2, 1)
 df = edit_df(df)
 df_USA = select_data(df, [2015, 2016], ["United States"], "Male")
-print(freq_table(df_USA, "Size (US)"))
+freq_table(df_USA, "Size (US)")
 
 
 # TOTAL SALES MEAN and STD DEV BY SIZE
 
 def mean_by_var(file = "ex/example_CI.xlsx", sheet = "Al Bundy", skiprows = 2, header = 1, years = [2015, 2016], country = ["United States"], gender = "Male", variable = "Size (US)"):
+    """
+    Calculate the mean for each different value of the chosen variable, given an excel file.
+
+    :param file: str - excel file containing the data.
+    :param sheet: str - file's sheet you want to read.
+    :param skiprows: int - number of rows from the begining of the file you don't want to read.
+    :param header: int - which row of the file, after the skiprows, contains the index of the columns.
+    :param years: list - which contains the year or years you want to select from the data to study.
+    :param country: list - country you want to select from the data to study.
+    :param gender: str - gender (male or female) you want to select from the data to study.
+    :param variable: str - from which variable you want to calculate the mean by each different value.
+    
+    :return means_sorted: dictionary - with the mean of each variable's value.
+    """
 
     df = read_excel_file(file, sheet, skiprows, header)
     df = edit_df(df)
     df_selection = select_data(df, years, country, gender)
+    sales_by_month = freq_table(df_selection, variable)
 
     means = {}
 
     for value in set(df_selection[variable]): # Per cada valor de la variable demanada, per exemple, la talla
 
-        df_selection_var = df_selection[df_selection[variable] == value]
-    
-        sales_by_month = df_selection_var.groupby(["Year", "Month"])[["Year", "Month"]].value_counts() # Sumem ventes realitzades per any i mes
+        means[value] = round(sales_by_month[value].sum() / (len(years)*12), 2) # Calculem la mitjana dividint la suma entre el total de dades, i arrodonint a dos decimals
 
-        means[value] = round(sales_by_month.sum() / (len(years)*12), 2) # Calculem la mitjana dividint la suma entre el total de dades, i arrodonint a dos decimals
+    means_sorted = dict(sorted(means.items()))
 
-    return means
+    return means_sorted
 
 def stderror_by_var(file = "ex/example_CI.xlsx", sheet = "Al Bundy", skiprows = 2, header = 1, years = [2015, 2016], country = ["United States"], gender = "Male", variable = "Size (US)"):
+    """
+    Calculate the standard error for each different value of the chosen variable, given an excel file.
+
+    :param file: str - excel file containing the data.
+    :param sheet: str - file's sheet you want to read.
+    :param skiprows: int - number of rows from the begining of the file you don't want to read.
+    :param header: int - which row of the file, after the skiprows, contains the index of the columns.
+    :param years: list - which contains the year or years you want to select from the data to study.
+    :param country: list - country you want to select from the data to study.
+    :param gender: str - gender (male or female) you want to select from the data to study.
+    :param variable: str - from which variable you want to calculate the standard error by each different value.
+    
+    :return std_error_sorted: dictionary - with the standard error of each variable's value.
+    """
 
     df = read_excel_file(file, sheet, skiprows, header)
     df = edit_df(df)
     df_selection = select_data(df, years, country, gender)
+    sales_by_month = freq_table(df_selection, variable)
 
     std_error = {}
 
     for value in set(df_selection[variable]): # Per cada valor de la variable demanada, per exemple, la talla
 
-        df_selection_var = df_selection[df_selection[variable] == value]
-    
-        sales_by_month = df_selection_var.groupby([variable, "Year", "Month"])[["Year", "Month"]].value_counts() # Sumem ventes realitzades per any i mes
+        if len(sales_by_month[value]) < (len(years)*12): # Si hi ha mesos que no hi ha venta, no apareix en la base de dades, i necessitem que consti el 0 en aquell mes.
+            for item in range(len(sales_by_month[value])+1, len(years)*12+1):
+                sales_by_month[value, years[0], item] = 0
 
-        if len(sales_by_month) < (len(years)*12): # Si hi ha mesos que no hi ha venta, no apareix en la base de dades, i necessitem que consti el 0 en aquell mes.
-            for item in range(len(sales_by_month)+1, len(years)*12+1):
-                sales_by_month[f"{item}"] = 0    
+        std_error[value] = round(sales_by_month[value].std() / (len(years)*12)**(1/2), 2) # Calculem l'standard error fent la desviació típica i dividint-la per l'arrel quadrada del total de dades; arrodonim a dos decimals
 
-        std_error[value] = round(sales_by_month.std() / (len(years)*12)**(1/2), 2) # Calculem la mitjana dividint la suma entre el total de dades, i arrodonint a dos decimals
+    std_error_sorted = dict(sorted(std_error.items()))
 
-    return std_error
-
-stderror_by_var()
+    return std_error_sorted
+print(mean_by_var())
