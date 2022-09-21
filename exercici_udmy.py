@@ -11,16 +11,16 @@ def read_excel_file(file_name, sheet_file, skip_rows, row_header):
     :param skiprows: int - number of rows from the begining you don't want to read.
     :param header: int - which row, after the skiprows, contains the index of the columns.
 
-    :return df: DataFrame - contains the readen data.    
+    :return df: DataFrame - contains the readen data.
     """
-
     df = pd.read_excel(file_name, sheet_name = sheet_file, skiprows = skip_rows, header = row_header)
 
     return df
 
-def edit_df(df):
+
+def prepare_dataframe(df):
     """
-    Edit the DataFrame given, imported from the file ex/example_CI.xlsx, selecting columns and categorizing.
+    Manipulate the DataFrame given, imported from the file ex/example_CI.xlsx, selecting columns and categorizing.
     
     :param df: DataFrame - readen from ex/example_CI.xlsx.
 
@@ -37,6 +37,7 @@ def edit_df(df):
 
     return df
 
+
 def select_data(df, years, countries, gender):
     """
     Given the DataFrame edited and imported from the file ex/example_CI.xlsx, select a particular set of data.
@@ -48,7 +49,6 @@ def select_data(df, years, countries, gender):
 
     :return df_selected: DataFrame - with data selected.
     """
-
     df_years = pd.DataFrame()
     for year in years:
         df_years = pd.concat([df_years, df[df["Year"] == year]])
@@ -62,7 +62,7 @@ def select_data(df, years, countries, gender):
     return df_selected
 
 
-# FREQUENCY TABLE: TOTAL SALES BY SIZE AND MONTH, USA - Male - 2015 i 2016
+# FREQUENCY TABLE
 
 def freq_table(df, variable):
     """
@@ -79,15 +79,7 @@ def freq_table(df, variable):
     return sales_by_month
 
 
-df = read_excel_file("ex/example_CI.xlsx", "Al Bundy", 2, 1)
-df = edit_df(df)
-df_USA = select_data(df, [2015, 2016], ["United States"], "Male")
-freq_table(df_USA, "Size (US)")
-
-
-# TOTAL SALES MEAN and STD DEV BY SIZE
-
-def mean_by_var(file = "ex/example_CI.xlsx", sheet = "Al Bundy", skiprows = 2, header = 1, years = [2015, 2016], country = ["United States"], gender = "Male", variable = "Size (US)"):
+def get_mean_by_var(file = "ex/example_CI.xlsx", sheet = "Al Bundy", skiprows = 2, header = 1, years = [2015, 2016], country = ["United States"], gender = "Male", variable = "Size (US)"):
     """
     Calculate the mean for each different value of the chosen variable, given an excel file.
 
@@ -104,7 +96,7 @@ def mean_by_var(file = "ex/example_CI.xlsx", sheet = "Al Bundy", skiprows = 2, h
     """
 
     df = read_excel_file(file, sheet, skiprows, header)
-    df = edit_df(df)
+    df = prepare_dataframe(df)
     df_selection = select_data(df, years, country, gender)
     sales_by_month = freq_table(df_selection, variable)
 
@@ -118,7 +110,8 @@ def mean_by_var(file = "ex/example_CI.xlsx", sheet = "Al Bundy", skiprows = 2, h
 
     return means_sorted
 
-def stderror_by_var(file = "ex/example_CI.xlsx", sheet = "Al Bundy", skiprows = 2, header = 1, years = [2015, 2016], country = ["United States"], gender = "Male", variable = "Size (US)"):
+
+def get_stderror_by_var(file = "ex/example_CI.xlsx", sheet = "Al Bundy", skiprows = 2, header = 1, years = [2015, 2016], country = ["United States"], gender = "Male", variable = "Size (US)"):
     """
     Calculate the standard error for each different value of the chosen variable, given an excel file.
 
@@ -133,9 +126,8 @@ def stderror_by_var(file = "ex/example_CI.xlsx", sheet = "Al Bundy", skiprows = 
     
     :return std_error_sorted: dictionary - with the standard error of each variable's value.
     """
-
     df = read_excel_file(file, sheet, skiprows, header)
-    df = edit_df(df)
+    df = prepare_dataframe(df)
     df_selection = select_data(df, years, country, gender)
     sales_by_month = freq_table(df_selection, variable)
 
@@ -152,4 +144,77 @@ def stderror_by_var(file = "ex/example_CI.xlsx", sheet = "Al Bundy", skiprows = 
     std_error_sorted = dict(sorted(std_error.items()))
 
     return std_error_sorted
-print(mean_by_var())
+
+
+def get_t_factor(sample_size, confidence_level = 95):
+    """
+    Return the reliability factor from a T-student table given the sample size and the confidence level.
+
+    :param sample_size: int - the size of the sample data.
+    :param confidence_level: int - of grade 100. 
+    
+    :return reliability_factor: float - The T-student factor which corresponds to degrees of freedom (sample size -1) and alpha/2 (c.level = 1 - alpha)
+    """
+    t_table = read_excel_file("ex/The-t-table.xlsx", "t-table", skip_rows = 4, row_header = 1)
+    t_table = t_table.set_index("d.f. / α")
+    t_table = t_table.iloc[:-3, 1:]
+
+    alpha = round(1 - (confidence_level / 100), 3)
+
+    reliability_factor = t_table.loc[sample_size - 1, alpha / 2]
+
+    return reliability_factor
+
+
+def get_margin_of_error(standard_error, sample_size, confidence_level = 95):
+    """
+    Return the margin of error, i.e., the standard error multiplied by the reliability factor (t-student factor).
+
+    :param standard_error: dictionary - that contains the variable's value as the key and its standard error
+    :param sample_size: int - the size of the sample data.
+    :param confidence_level: int - of grade 100. 
+
+    :return margin_of_error: dictionary - that contains the variable's value as the key and its margin of error.
+    """
+    reliability_factor = get_t_factor(sample_size, confidence_level)
+
+    margin_of_error = {key: round(value * reliability_factor, 2) for key, value in standard_error.items()}
+
+    return margin_of_error
+
+
+def get_confidence_interval(means, margin_of_error):
+    """
+    Return the confidence interval given the point estimate (the mean) and the margin of error.
+
+    :param means: dictionary -
+    :param margin_of_error: dictionary -
+
+    :return confidence_intervals: dictionary of lists - 
+    """
+    confidence_intervals = {}
+
+    for key, value in means.items():
+        confidence_intervals[key] = [round(value - margin_of_error[key], 2), round(value + margin_of_error[key], 2)]
+    
+    return confidence_intervals
+
+
+# FREQUENCY TABLE: TOTAL SALES BY SIZE AND MONTH, USA - Male - 2015 i 2016
+
+# df = read_excel_file("ex/example_CI.xlsx", "Al Bundy", 2, 1)
+# df = prepare_dataframe(df)
+# df_USA = select_data(df, [2015, 2016], ["United States"], "Male")
+# freq_table(df_USA, "Size (US)")
+
+# TOTAL SALES STD ERROR, MARGIN OF ERROR, MEAN BY SIZE
+
+standard_error = get_stderror_by_var(file = "ex/example_CI.xlsx", sheet = "Al Bundy", skiprows = 2, header = 1, years = [2015, 2016], country = ["United States"], gender = "Male", variable = "Size (US)")
+
+margin_of_error = get_margin_of_error(standard_error, 24, 95)
+
+means = get_mean_by_var(file = "ex/example_CI.xlsx", sheet = "Al Bundy", skiprows = 2, header = 1, years = [2015, 2016], country = ["United States"], gender = "Male", variable = "Size (US)")
+
+# CONFIDENCE INTERVALS
+
+print(get_confidence_interval(means, margin_of_error))
