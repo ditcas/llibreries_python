@@ -192,7 +192,7 @@ def get_margin_of_error(standard_error, sample_size, confidence_level = 95):
 
     :return margin_of_error: dictionary - that contains the variable's value as the key and its margin of error.
     """
-    reliability_factor = get_t_factor(sample_size, confidence_level)
+    reliability_factor = get_reliability_factor(sample_size, confidence_level)
 
     margin_of_error = {key: round(value * reliability_factor, 2) for key, value in standard_error.items()}
 
