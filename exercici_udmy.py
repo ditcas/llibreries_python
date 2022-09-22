@@ -79,67 +79,64 @@ def freq_table(df, variable):
     return sales_by_month
 
 
-def get_mean_by_var(file = "ex/example_CI.xlsx", sheet = "Al Bundy", skiprows = 2, header = 1, years = [2015, 2016], country = ["United States"], gender = "Male", variable = "Size (US)"):
+def get_mean_by_var(freq_table):
     """
-    Calculate the mean for each different value of the chosen variable, given an excel file.
+    Calculate the mean for each different value of the chosen variable in the frequency table.
 
-    :param file: str - excel file containing the data.
-    :param sheet: str - file's sheet you want to read.
-    :param skiprows: int - number of rows from the begining of the file you don't want to read.
-    :param header: int - which row of the file, after the skiprows, contains the index of the columns.
-    :param years: list - which contains the year or years you want to select from the data to study.
-    :param country: list - country you want to select from the data to study.
-    :param gender: str - gender (male or female) you want to select from the data to study.
-    :param variable: str - from which variable you want to calculate the mean by each different value.
+    :param freq_table: Series - containing the frequency of the variable to study, and variables year and month.
     
     :return means_sorted: dictionary - with the mean of each variable's value.
     """
 
-    df = read_excel_file(file, sheet, skiprows, header)
-    df = prepare_dataframe(df)
-    df_selection = select_data(df, years, country, gender)
-    sales_by_month = freq_table(df_selection, variable)
+    years = set()
+    for index in freq_table.index:
+        years.add(index[1])
+    years = sorted(years)
+
+    variable_values = set()
+    for index in freq_table.index:
+        variable_values.add(index[0])
+    variable_values = sorted(variable_values)
 
     means = {}
 
-    for value in set(df_selection[variable]): # Per cada valor de la variable demanada, per exemple, la talla
+    for value in variable_values: # Per cada valor de la variable demanada, per exemple, la talla
 
-        means[value] = round(sales_by_month[value].sum() / (len(years)*12), 2) # Calculem la mitjana dividint la suma entre el total de dades, i arrodonint a dos decimals
+        means[value] = round(freq_table[value].sum() / (len(years)*12), 2) # Calculem la mitjana dividint la suma entre el total de dades, i arrodonint a dos decimals
 
     means_sorted = dict(sorted(means.items()))
 
     return means_sorted
 
 
-def get_stderror_by_var(file = "ex/example_CI.xlsx", sheet = "Al Bundy", skiprows = 2, header = 1, years = [2015, 2016], country = ["United States"], gender = "Male", variable = "Size (US)"):
+def get_stderror_by_var(freq_table):
     """
-    Calculate the standard error for each different value of the chosen variable, given an excel file.
+    Calculate the standard error for each different value of the chosen variable in the frequency table.
 
-    :param file: str - excel file containing the data.
-    :param sheet: str - file's sheet you want to read.
-    :param skiprows: int - number of rows from the begining of the file you don't want to read.
-    :param header: int - which row of the file, after the skiprows, contains the index of the columns.
-    :param years: list - which contains the year or years you want to select from the data to study.
-    :param country: list - country you want to select from the data to study.
-    :param gender: str - gender (male or female) you want to select from the data to study.
-    :param variable: str - from which variable you want to calculate the standard error by each different value.
+    :param freq_table: Series - containing the frequency of the variable to study, and variables year and month.
     
     :return std_error_sorted: dictionary - with the standard error of each variable's value.
     """
-    df = read_excel_file(file, sheet, skiprows, header)
-    df = prepare_dataframe(df)
-    df_selection = select_data(df, years, country, gender)
-    sales_by_month = freq_table(df_selection, variable)
+
+    years = set()
+    for index in freq_table.index:
+        years.add(index[1])
+    years = sorted(years)
+
+    variable_values = set()
+    for index in freq_table.index:
+        variable_values.add(index[0])
+    variable_values = sorted(variable_values)
 
     std_error = {}
 
-    for value in set(df_selection[variable]): # Per cada valor de la variable demanada, per exemple, la talla
+    for value in variable_values: # Per cada valor de la variable demanada, per exemple, la talla
 
-        if len(sales_by_month[value]) < (len(years)*12): # Si hi ha mesos que no hi ha venta, no apareix en la base de dades, i necessitem que consti el 0 en aquell mes.
-            for item in range(len(sales_by_month[value])+1, len(years)*12+1):
-                sales_by_month[value, years[0], item] = 0
+        if len(freq_table[value]) < (len(years)*12): # Si hi ha mesos que no hi ha venta, no apareix en la base de dades, i necessitem que consti el 0 en aquell mes.
+            for item in range(len(freq_table[value])+1, len(years)*12+1):
+                freq_table[value, years[0], item] = 0
 
-        std_error[value] = round(sales_by_month[value].std() / (len(years)*12)**(1/2), 2) # Calculem l'standard error fent la desviació típica i dividint-la per l'arrel quadrada del total de dades; arrodonim a dos decimals
+        std_error[value] = round(freq_table[value].std() / (len(years)*12)**(1/2), 2) # Calculem l'standard error fent la desviació típica i dividint-la per l'arrel quadrada del total de dades; arrodonim a dos decimals
 
     std_error_sorted = dict(sorted(std_error.items()))
 
@@ -221,15 +218,15 @@ def get_confidence_interval(means, margin_of_error):
 df = read_excel_file("ex/example_CI.xlsx", "Al Bundy", 2, 1)
 df = prepare_dataframe(df)
 df_USA = select_data(df, [2015, 2016], ["United States"], "Male")
-freq_table(df_USA, "Size (US)")
+sales_by_size = freq_table(df_USA, "Size (US)")
 
 # TOTAL SALES STD ERROR, MARGIN OF ERROR, MEAN BY SIZE
 
-standard_error = get_stderror_by_var(file = "ex/example_CI.xlsx", sheet = "Al Bundy", skiprows = 2, header = 1, years = [2015, 2016], country = ["United States"], gender = "Male", variable = "Size (US)")
+standard_error = get_stderror_by_var(sales_by_size)
 
 margin_of_error = get_margin_of_error(standard_error, 24, 95)
 
-means = get_mean_by_var(file = "ex/example_CI.xlsx", sheet = "Al Bundy", skiprows = 2, header = 1, years = [2015, 2016], country = ["United States"], gender = "Male", variable = "Size (US)")
+means = get_mean_by_var(sales_by_size)
 
 # CONFIDENCE INTERVALS
 
