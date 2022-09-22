@@ -145,8 +145,25 @@ def get_stderror_by_var(file = "ex/example_CI.xlsx", sheet = "Al Bundy", skiprow
 
     return std_error_sorted
 
+def get_t_factor(degrees_of_freedom, alpha):
+    """
+    Return the factor from a T-student table given the degrees of freedom and the parameter alpha.
 
-def get_t_factor(sample_size, confidence_level = 95):
+    :param degrees_of_freedom: int - between 1-120.
+    :param alpha: float - 0.1, 0.05, 0.025, 0.01, 0.005. The significance level.
+    
+    :return t_factor: float - The T-student factor which corresponds to degrees of freedom and alpha.
+    """
+    t_table = read_excel_file("ex/The-t-table.xlsx", "t-table", skip_rows = 4, row_header = 1)
+    t_table = t_table.set_index("d.f. / α")
+    t_table = t_table.iloc[:-3, 1:]
+
+    t_factor = t_table.loc[degrees_of_freedom, alpha]
+
+    return t_factor
+
+
+def get_reliability_factor(sample_size, confidence_level = 95):
     """
     Return the reliability factor from a T-student table given the sample size and the confidence level.
 
@@ -155,13 +172,12 @@ def get_t_factor(sample_size, confidence_level = 95):
     
     :return reliability_factor: float - The T-student factor which corresponds to degrees of freedom (sample size -1) and alpha/2 (c.level = 1 - alpha)
     """
-    t_table = read_excel_file("ex/The-t-table.xlsx", "t-table", skip_rows = 4, row_header = 1)
-    t_table = t_table.set_index("d.f. / α")
-    t_table = t_table.iloc[:-3, 1:]
+
+    degrees_of_freedom = sample_size - 1
 
     alpha = round(1 - (confidence_level / 100), 3)
 
-    reliability_factor = t_table.loc[sample_size - 1, alpha / 2]
+    reliability_factor = get_t_factor(degrees_of_freedom, alpha/2)
 
     return reliability_factor
 
@@ -202,10 +218,10 @@ def get_confidence_interval(means, margin_of_error):
 
 # FREQUENCY TABLE: TOTAL SALES BY SIZE AND MONTH, USA - Male - 2015 i 2016
 
-# df = read_excel_file("ex/example_CI.xlsx", "Al Bundy", 2, 1)
-# df = prepare_dataframe(df)
-# df_USA = select_data(df, [2015, 2016], ["United States"], "Male")
-# freq_table(df_USA, "Size (US)")
+df = read_excel_file("ex/example_CI.xlsx", "Al Bundy", 2, 1)
+df = prepare_dataframe(df)
+df_USA = select_data(df, [2015, 2016], ["United States"], "Male")
+freq_table(df_USA, "Size (US)")
 
 # TOTAL SALES STD ERROR, MARGIN OF ERROR, MEAN BY SIZE
 
