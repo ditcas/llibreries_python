@@ -33,7 +33,7 @@ def prepare_dataframe(df):
     # for item in df.columns: # Listing the type of the variables
     #     print(f"{item}: {df[item].dtype}")
 
-    df["Gender"].astype("category") # Categorizing the variable Gender, which contains Male and Female.
+    df["Gender"] = df["Gender"].astype("category") # Categorizing the variable Gender, which contains Male and Female.
 
     return df
 

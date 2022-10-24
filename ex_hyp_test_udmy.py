@@ -31,8 +31,8 @@ def prepare_dataframe(df):
     df = df.iloc[:, 1:-1] # Select all rows, and all columns except first an last one.
     df = df.loc[:, ["Age", "Gender", "Country", "Ethnicity", "Salary"]] # Select only the columns we are going to use.
 
-    df["Gender"].astype("category") # Categorizing the variable Gender, which contains Male and Female.
-    df["Ethnicity"].astype("category") # Categorizing the variable Gender, which contains Male and Female.
+    df["Gender"] = df["Gender"].astype("category") # Categorizing the variable Gender, which contains Male and Female.
+    df["Ethnicity"] = df["Ethnicity"].astype("category") # Categorizing the variable Gender, which contains Male and Female.
 
     return df
 
